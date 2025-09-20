@@ -39,7 +39,7 @@ export class OpnsenseGatewayStatus implements INodeType {
                 description: 'IP or hostname of the OPNSense router',
             },
             {
-                displayName: 'Gateway Name or ID',
+                displayName: 'Gateway Name',
                 name: 'gateway',
                 type: 'options',
                 typeOptions: {
@@ -47,7 +47,7 @@ export class OpnsenseGatewayStatus implements INodeType {
                 },
                 default: '',
                 required: true,
-                description: 'Select the gateway to monitor. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+                description: 'Select the gateway to monitor.',
             },
         ],
     };
@@ -69,10 +69,11 @@ export class OpnsenseGatewayStatus implements INodeType {
                         url: `${routerIp}/api/routes/gateway/status`,
                         auth: credentials,
                         json: true,
+                        rejectUnauthorized: false,
                         timeout: 5000,
                     });
 
-                    return response.map((gw: any) => ({
+                    return response.items.map((gw: any) => ({
                         name: gw.name,
                         value: gw.name,
                         description: `Status: ${gw.status_translated}`,
@@ -85,7 +86,7 @@ export class OpnsenseGatewayStatus implements INodeType {
         },
     };
 
-    async poll(this: IPollFunctions): Promise<INodeExecutionData[][]> {
+    async poll(this: IPollFunctions): Promise<INodeExecutionData[][] | null> {
         const routerIp = this.getNodeParameter('routerIp', 0) as string;
         const gateway = this.getNodeParameter('gateway', 0) as string;
         const credentials = await this.getCredentials('opnsenseApi');
@@ -99,10 +100,11 @@ export class OpnsenseGatewayStatus implements INodeType {
                 url: `${routerIp}/api/routes/gateway/status`,
                 auth: credentials,
                 json: true,
+                rejectUnauthorized: false,
                 timeout: 10000,
             });
 
-            const gwStatus = response.find((gw: any) => gw.name === gateway);
+            const gwStatus = response.items.find((gw: any) => gw.name === gateway);
             const currentStatus = gwStatus?.status || 'unknown';
 
             const lastStatus = workflowStaticData[gateway] || null;
@@ -118,7 +120,7 @@ export class OpnsenseGatewayStatus implements INodeType {
             }
 
             // No change - do not trigger output
-            return this.prepareOutputData([]);
+            return null;
         } catch (error: any) {
             // Handle timeout or error as before, treat timeout as 'down'
             if (
@@ -132,7 +134,7 @@ export class OpnsenseGatewayStatus implements INodeType {
                         { json: { gateway, oldStatus: lastStatus, newStatus: 'down', reason: 'timeout' } },
                     ]);
                 }
-                return this.prepareOutputData([]);
+                return null;
             }
             throw new NodeApiError(this.getNode(), error);
         }
