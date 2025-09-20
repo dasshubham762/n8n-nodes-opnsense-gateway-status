@@ -3,8 +3,9 @@ import {
     INodeExecutionData,
     INodeType,
     INodeTypeDescription,
-    IExecuteFunctions,
+    IPollFunctions,
     NodeApiError,
+    NodeConnectionType,
 } from 'n8n-workflow';
 
 export class OpnsenseGatewayStatus implements INodeType {
@@ -18,8 +19,9 @@ export class OpnsenseGatewayStatus implements INodeType {
             name: 'OPNSense Gateway Status',
         },
         icon: 'file:opnsenseGatewayStatus.svg',
+        polling: true,
         inputs: [],
-        outputs: [],
+        outputs: [NodeConnectionType.Main],
         credentials: [
             {
                 name: 'opnsenseApi',
@@ -83,7 +85,7 @@ export class OpnsenseGatewayStatus implements INodeType {
         },
     };
 
-    async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+    async poll(this: IPollFunctions): Promise<INodeExecutionData[][]> {
         const routerIp = this.getNodeParameter('routerIp', 0) as string;
         const gateway = this.getNodeParameter('gateway', 0) as string;
         const credentials = await this.getCredentials('opnsenseApi');
@@ -97,7 +99,7 @@ export class OpnsenseGatewayStatus implements INodeType {
                 url: `${routerIp}/api/routes/gateway/status`,
                 auth: credentials,
                 json: true,
-                timeout: 5000,
+                timeout: 10000,
             });
 
             const gwStatus = response.find((gw: any) => gw.name === gateway);
