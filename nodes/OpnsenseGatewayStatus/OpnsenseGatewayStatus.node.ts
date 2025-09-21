@@ -6,6 +6,7 @@ import {
   IPollFunctions,
   NodeApiError,
   NodeConnectionType,
+  NodeOperationError,
   tryToParseDateTime
 } from 'n8n-workflow';
 
@@ -40,7 +41,7 @@ export class OpnsenseGatewayStatus implements INodeType {
         description: 'IP or hostname of the OPNSense router',
       },
       {
-        displayName: 'Gateway Name',
+        displayName: 'Gateway Name or ID',
         name: 'gateway',
         type: 'options',
         typeOptions: {
@@ -48,10 +49,10 @@ export class OpnsenseGatewayStatus implements INodeType {
         },
         default: '',
         required: true,
-        description: 'Select the gateway to monitor.',
+        description: 'Select the gateway to monitor. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
       },
       {
-        displayName: "Trigger Delay (minutes)",
+        displayName: 'Trigger Delay (Minutes)',
         name: 'triggerDelay',
         type: 'number',
         typeOptions: {
@@ -145,7 +146,7 @@ export class OpnsenseGatewayStatus implements INodeType {
 
       const gwStatus = response.items.find((gw: any) => gw.name === gateway);
       if (!gwStatus) {
-        throw new Error(`Gateway ${gateway} not found in OPNSense response`);
+        throw new NodeOperationError(this.getNode(), `Gateway ${gateway} not found in OPNSense response`);
       }
 
       // Normalize 'none' status to 'up'
