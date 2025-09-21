@@ -7,8 +7,16 @@ import {
   NodeApiError,
   NodeConnectionType,
   NodeOperationError,
-  tryToParseDateTime
+  tryToParseDateTime,
+  ICredentialDataDecryptedObject
 } from 'n8n-workflow';
+
+const MAX_TIMEOUT_MS = 5000; // 5 seconds
+
+const generateAuth = (credentials: ICredentialDataDecryptedObject) => ({
+  username: credentials.apiKey as string,
+  password: credentials.apiSecret as string,
+});
 
 export class OpnsenseGatewayStatus implements INodeType {
   description: INodeTypeDescription = {
@@ -32,22 +40,12 @@ export class OpnsenseGatewayStatus implements INodeType {
     ],
     properties: [
       {
-        displayName: 'Router IP',
-        name: 'routerIp',
-        type: 'string',
-        validateType: 'url',
-        default: '',
-        required: true,
-        placeholder: 'https://192.168.1.1',
-        description: 'IP or hostname of the OPNSense router',
-      },
-      {
         displayName: 'Gateway Name or ID',
         name: 'gateway',
         type: 'options',
         typeOptions: {
           loadOptionsMethod: 'getGateways',
-          loadOptionsDependsOn: ['routerIp'],
+          loadOptionsDependsOn: ['credentials'],
         },
         default: '',
         required: true,
@@ -70,22 +68,16 @@ export class OpnsenseGatewayStatus implements INodeType {
   methods = {
     loadOptions: {
       async getGateways(this: ILoadOptionsFunctions) {
-        const routerIp =
-          this.getNodeParameter('routerIp') as string | undefined;
         const credentials = await this.getCredentials('opnsenseApi');
-
-        if (!routerIp) {
-          return [];
-        }
 
         try {
           const response = await this.helpers.request({
             method: 'GET',
-            url: `${routerIp}/api/routes/gateway/status`,
-            auth: credentials,
+            url: `${credentials.routerUrl}/api/routes/gateway/status`,
+            auth: generateAuth(credentials),
             json: true,
             rejectUnauthorized: false,
-            timeout: 5000,
+            timeout: MAX_TIMEOUT_MS,
           });
 
           return response.items.map((gw: any) => ({
@@ -102,7 +94,6 @@ export class OpnsenseGatewayStatus implements INodeType {
   };
 
   async poll(this: IPollFunctions): Promise<INodeExecutionData[][] | null> {
-    const routerIp = this.getNodeParameter('routerIp', 0) as string;
     const gateway = this.getNodeParameter('gateway', 0) as string;
     const credentials = await this.getCredentials('opnsenseApi');
     const triggerDelay = this.getNodeParameter('triggerDelay', 0) as number;
@@ -139,11 +130,11 @@ export class OpnsenseGatewayStatus implements INodeType {
     try {
       const response = await this.helpers.request({
         method: 'GET',
-        url: `${routerIp}/api/routes/gateway/status`,
-        auth: credentials,
+        url: `${credentials.routerUrl}/api/routes/gateway/status`,
+        auth: generateAuth(credentials),
         json: true,
         rejectUnauthorized: false,
-        timeout: 10000,
+        timeout: MAX_TIMEOUT_MS,
       });
 
       const gwStatus = response.items.find((gw: any) => gw.name === gateway);
