@@ -35,6 +35,7 @@ export class OpnsenseGatewayStatus implements INodeType {
         displayName: 'Router IP',
         name: 'routerIp',
         type: 'string',
+        validateType: 'url',
         default: '',
         required: true,
         placeholder: 'https://192.168.1.1',
@@ -46,6 +47,7 @@ export class OpnsenseGatewayStatus implements INodeType {
         type: 'options',
         typeOptions: {
           loadOptionsMethod: 'getGateways',
+          loadOptionsDependsOn: ['routerIp'],
         },
         default: '',
         required: true,
