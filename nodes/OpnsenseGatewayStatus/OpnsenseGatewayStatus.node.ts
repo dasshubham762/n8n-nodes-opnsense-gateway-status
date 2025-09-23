@@ -4,7 +4,6 @@ import {
   INodeType,
   INodeTypeDescription,
   IPollFunctions,
-  NodeApiError,
   NodeConnectionType,
   NodeOperationError,
   tryToParseDateTime,
@@ -108,7 +107,7 @@ export class OpnsenseGatewayStatus implements INodeType {
       if (lastStatus !== currentStatus) {
         workflowStaticData[gateway] = currentStatus;
         workflowStaticData[`${gateway}_time`] = Date.now();
-        workflowStaticData[`${gateway}_triggered`] = false;
+				workflowStaticData[`${gateway}_triggered`] = !hasTriggered;
       }
 
       if (!hasTriggered && Date.now() - lastStatusTime >= (triggerDelay * 60000)) {
@@ -155,7 +154,7 @@ export class OpnsenseGatewayStatus implements INodeType {
         const currentStatus = 'down';
         return triggerOnChange(currentStatus);
       }
-      throw new NodeApiError(this.getNode(), error);
+      return null;
     }
   }
 }
